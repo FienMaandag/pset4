@@ -136,24 +136,29 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        var chekking = Int()
-        let updateToDo = itemlist[(indexPath.row)]
-        let user = users.filter(todo.like(updateToDo!))
+        let cell = tableView.cellForRow(at:indexPath) as! ToDoItemCell
+        
+        // var chekking = Int()
+        let updateToDo = itemlist[indexPath.row]!
+        let row = users.filter(todo.like(updateToDo))
+        print(updateToDo)
+        print(row)
 
         do {
-            chekking = try database!.run(user.update(done <- true))
+            cell.doneSwitch.setOn(true, animated: true)
+            try database?.run(row.update(done <- true))
         } catch{
             print("error1")
         }
         
-        if chekking == 0 {
-            do{
-                try database?.run(user.update(done <- false))
-            } catch{
-                print("error2")
-            }
-
-        }
+//        if chekking == 0 {
+//            do{
+//                try database?.run(user.update(done <- false))
+//            } catch{
+//                print("error2")
+//            }
+//
+//        }
         
         //let cell = tableView.cellForRow(at:indexPath!) as! ToDoItemCell
             //print(cell)
