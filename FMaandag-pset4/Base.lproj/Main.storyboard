@@ -63,6 +63,7 @@
                                             </subviews>
                                         </tableViewCellContentView>
                                         <connections>
+                                            <outlet property="doneSwitch" destination="IVy-wU-joG" id="E3r-aS-4rv"/>
                                             <outlet property="itemLabel" destination="QDC-W5-7Mk" id="ZIV-s2-9oU"/>
                                         </connections>
                                     </tableViewCell>

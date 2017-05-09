@@ -11,30 +11,53 @@ import SQLite
 
 class ListViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
-    var itemlist = [String?]()
+    var itemlist = [(id: Int64, text: String, done: Bool)]()
     
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var newToDo: UITextField!
     
     private var database: Connection?
-    let users = Table("users")
+    let todolist = Table("todolist")
     let id = Expression<Int64>("id")
     let todo = Expression<String>("todo")
     var done = Expression<Bool>("done")
     
     @IBAction func doneToDo(_ sender: UISwitch) {
+        let indexPath = IndexPath(row: sender.tag, section: 0)
+        
+        guard let cell = self.tableView.cellForRow(at: indexPath) as? ToDoItemCell else {
+            return
+        }
+        
+        // update database
+        let updateToDo = itemlist[indexPath.row]
+        let row = todolist.filter(id == updateToDo.id)
+        print(updateToDo)
+        print(row)
+        
+        let value = sender.isOn
 
+        do {
+            cell.doneSwitch.setOn(value, animated: true)
+            try database?.run(row.update(done <- value))
+        } catch{
+            print("error1")
+        }
     }
 
     @IBAction func addItemButton(_ sender: Any) {
-        let insert = users.insert(todo <- newToDo.text!)
-        
+        let insert = todolist.insert(todo <- newToDo.text!, done <- false)
+
         do {
             let rowId = try database!.run(insert)
             
             do {
-                for user in try database!.prepare(users.filter(id == rowId)){
-                    itemlist.append(user[todo])
+                for todos in try database!.prepare(todolist.filter(id == rowId)){
+                    itemlist.append((
+                        id:   todos[id],
+                        text: todos[todo],
+                        done: todos[done]
+                    ))
                     newToDo.text = nil
                 }
             } catch{
@@ -55,8 +78,12 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         setUpDatabase()
         
         do{
-            for user in try database!.prepare(users){
-                itemlist.append(user[todo])
+            for todos in try database!.prepare(todolist){
+                itemlist.append((
+                    id:   todos[id],
+                    text: todos[todo],
+                    done: todos[done]
+                ))
             }
         }catch {
             // error handeling
@@ -78,7 +105,11 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "ItemCell", for: indexPath) as! ToDoItemCell
         
-        cell.itemLabel.text = itemlist[indexPath.row]
+        cell.itemLabel.text = itemlist[indexPath.row].text
+        cell.doneSwitch.isOn = itemlist[indexPath.row].done
+        cell.doneSwitch.tag = indexPath.row
+        
+        cell.selectionStyle = .none
         
         return cell
     }
@@ -89,7 +120,7 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         if editingStyle == .delete {
             
             let deleteToDo = itemlist[indexPath.row]
-            let removeToDo = users.filter(todo.like(deleteToDo!))
+            let removeToDo = todolist.filter(id == deleteToDo.id)
             
             do {
                 try database?.run(removeToDo.delete())
@@ -121,7 +152,7 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     func createTable() {
         do {
-            try database!.run(users.create(ifNotExists: true) {t in
+            try database!.run(todolist.create(ifNotExists: true) {t in
                 t.column(id, primaryKey: .autoincrement)
                 t.column(todo)
                 t.column(done)
@@ -133,35 +164,5 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
             print("Cannot create table: \(error)")
         }
         
-    }
-    
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let cell = tableView.cellForRow(at:indexPath) as! ToDoItemCell
-        
-        // var chekking = Int()
-        let updateToDo = itemlist[indexPath.row]!
-        let row = users.filter(todo.like(updateToDo))
-        print(updateToDo)
-        print(row)
-
-        do {
-            cell.doneSwitch.setOn(true, animated: true)
-            try database?.run(row.update(done <- true))
-        } catch{
-            print("error1")
-        }
-        
-//        if chekking == 0 {
-//            do{
-//                try database?.run(user.update(done <- false))
-//            } catch{
-//                print("error2")
-//            }
-//
-//        }
-        
-        //let cell = tableView.cellForRow(at:indexPath!) as! ToDoItemCell
-            //print(cell)
-
     }
 }
