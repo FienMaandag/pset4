@@ -20,8 +20,12 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
     let users = Table("users")
     let id = Expression<Int64>("id")
     let todo = Expression<String>("todo")
+    var done = Expression<Bool>("done")
     
-    
+    @IBAction func doneToDo(_ sender: UISwitch) {
+
+    }
+
     @IBAction func addItemButton(_ sender: Any) {
         let insert = users.insert(todo <- newToDo.text!)
         
@@ -85,9 +89,8 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         if editingStyle == .delete {
             
             let deleteToDo = itemlist[indexPath.row]
-            print(deleteToDo)
-            
             let removeToDo = users.filter(todo.like(deleteToDo!))
+            
             do {
                 try database?.run(removeToDo.delete())
             }
@@ -121,6 +124,7 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
             try database!.run(users.create(ifNotExists: true) {t in
                 t.column(id, primaryKey: .autoincrement)
                 t.column(todo)
+                t.column(done)
             })
         }
         
@@ -130,5 +134,29 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         }
         
     }
-}
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        var chekking = Int()
+        let updateToDo = itemlist[(indexPath.row)]
+        let user = users.filter(todo.like(updateToDo!))
 
+        do {
+            chekking = try database!.run(user.update(done <- true))
+        } catch{
+            print("error1")
+        }
+        
+        if chekking == 0 {
+            do{
+                try database?.run(user.update(done <- false))
+            } catch{
+                print("error2")
+            }
+
+        }
+        
+        //let cell = tableView.cellForRow(at:indexPath!) as! ToDoItemCell
+            //print(cell)
+
+    }
+}

@@ -12,6 +12,7 @@ import SQLite
 class ToDoItemCell: UITableViewCell {
 
     @IBOutlet weak var itemLabel: UILabel!
+    @IBOutlet weak var doneSwitch: UISwitch!
     
     override func awakeFromNib() {
         super.awakeFromNib()
