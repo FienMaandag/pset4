@@ -27,26 +27,22 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         
         do {
             let rowId = try database!.run(insert)
-            print(rowId)
-        }
-        
-        catch{
+            
+            do {
+                for user in try database!.prepare(users.filter(id == rowId)){
+                    itemlist.append(user[todo])
+                    newToDo.text = nil
+                }
+            } catch{
+                // error handeling
+                print("Could not search in database: \(error)")
+            }
+
+        } catch{
             // error handeling
             print("Error creating to do: \(error)")
         }
         
-        do {
-            for user in try database!.prepare(users){
-                itemlist.append(user[todo])
-                print(itemlist)
-            newToDo.text = nil
-            }
-        }
-        
-        catch{
-            // error handeling
-            print("Could not search in database: \(error)")
-        }
         tableView.reloadData()
     }
     
@@ -54,6 +50,15 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         super.viewDidLoad()
         setUpDatabase()
         
+        do{
+            for user in try database!.prepare(users){
+                itemlist.append(user[todo])
+            }
+        }catch {
+            // error handeling
+            print("No data found: \(error)")
+        }
+   
         self.navigationItem.title = "To Do List"
     }
 
@@ -79,10 +84,12 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         
         if editingStyle == .delete {
             
-            let removeToDo = users.filter(todo.like("%\(itemlist[indexPath.row]!)%"))
+            let deleteToDo = itemlist[indexPath.row]
+            print(deleteToDo)
+            
+            let removeToDo = users.filter(todo.like(deleteToDo!))
             do {
                 try database?.run(removeToDo.delete())
-                
             }
             catch {
                 // error handeling 
