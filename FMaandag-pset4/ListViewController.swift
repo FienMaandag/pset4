@@ -7,21 +7,52 @@
 //
 
 import UIKit
+import SQLite
 
 class ListViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
-    var itemlist = ["todo1", "todo2", "todo3"]
+    var itemlist = [String?]()
     
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var newToDo: UITextField!
+    
+    private var database: Connection?
+    let users = Table("users")
+    let id = Expression<Int64>("id")
+    let todo = Expression<String>("todo")
+    
+    
     @IBAction func addItemButton(_ sender: Any) {
-        itemlist.append(newToDo.text!)
-        newToDo.text = nil
+        let insert = users.insert(todo <- newToDo.text!)
+        
+        do {
+            let rowId = try database!.run(insert)
+            print(rowId)
+        }
+        
+        catch{
+            // error handeling
+            print("Error creating to do: \(error)")
+        }
+        
+        do {
+            for user in try database!.prepare(users){
+                itemlist.append(user[todo])
+                print(itemlist)
+            newToDo.text = nil
+            }
+        }
+        
+        catch{
+            // error handeling
+            print("Could not search in database: \(error)")
+        }
         tableView.reloadData()
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        setUpDatabase()
         
         self.navigationItem.title = "To Do List"
     }
@@ -31,7 +62,6 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        
         return itemlist.count
     }
     
@@ -48,11 +78,50 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
         
         if editingStyle == .delete {
+            
+            let removeToDo = users.filter(todo.like("%\(itemlist[indexPath.row]!)%"))
+            do {
+                try database?.run(removeToDo.delete())
+                
+            }
+            catch {
+                // error handeling 
+                print("Could not remove: \(error)")
+            }
+            
             itemlist.remove(at: indexPath.row)
             
             // delete the table view row
             tableView.deleteRows(at: [indexPath], with: .fade)
         }
+    }
+    
+    private func setUpDatabase() {
+        let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+        
+        do {
+            database = try Connection("\(path)/db.sqlite3")
+            createTable()
+        }
+        catch {
+            // error handeling
+            print("Cannot connect to database: \(error)")
+        }
+    }
+    
+    func createTable() {
+        do {
+            try database!.run(users.create(ifNotExists: true) {t in
+                t.column(id, primaryKey: .autoincrement)
+                t.column(todo)
+            })
+        }
+        
+        catch {
+            // error handeling
+            print("Cannot create table: \(error)")
+        }
+        
     }
 }
 
